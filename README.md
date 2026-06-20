@@ -566,29 +566,71 @@ docker restart tala-odoo
 
 For installed module changes, update the module from Odoo Apps or use the Odoo upgrade flow. Restarting reloads the server process, but installed module data may still need a module update.
 
-#### Reset the Local Database
+#### Factory Reset the Local System
 
-Stop containers but keep data:
+Use this when the local Odoo system should be reset as if it was newly installed.
+
+Stop containers but keep all data:
 
 ```powershell
 docker compose down
 ```
 
-Delete containers and all local Docker volumes for this stack:
+This only stops the stack. It does not delete the database, Odoo filestore, installed modules, uploaded files, website edits, students, faculty, courses, or pgAdmin saved server configuration.
+
+Full factory reset:
 
 ```powershell
+cd "D:\D SCHOOL\SYSTEMS\tala-odoo-docker"
 docker compose down -v
+docker compose up -d
 ```
 
-This deletes:
+The `-v` flag deletes the Docker volumes for this stack. This removes:
 
 ```text
-tala-db-data
-tala-odoo-data
-tala-pgadmin-data
+PostgreSQL database data
+Odoo filestore data
+pgAdmin saved server configuration
 ```
 
-Use this only when intentionally starting from a clean database.
+In this setup, the volume names are:
+
+```text
+tala-odoo-docker_tala-db-data
+tala-odoo-docker_tala-odoo-data
+tala-odoo-docker_tala-pgadmin-data
+```
+
+After the reset, open Odoo again:
+
+```text
+http://localhost:8069
+```
+
+Odoo should show the database creation page again.
+
+To delete only the Odoo database but keep the Docker volumes and containers:
+
+```powershell
+docker exec tala-postgres dropdb -U attalasys tala
+```
+
+Use this only when you want to remove the `tala` database but keep the Odoo filestore volume and pgAdmin configuration.
+
+The reset commands do not delete the source code repository:
+
+```text
+D:\D SCHOOL\SYSTEMS\TALA
+```
+
+They also do not delete the Docker runtime files:
+
+```text
+D:\D SCHOOL\SYSTEMS\tala-odoo-docker
+```
+
+Only use `docker compose down -v` when intentionally deleting local system data.
 
 ---
 

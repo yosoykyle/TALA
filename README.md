@@ -202,7 +202,32 @@ tala-odoo
 tala-pgadmin
 ```
 
-### Open Odoo
+### First-Time Setup After Docker Starts
+
+After `docker compose up -d`, there are three running services:
+
+```text
+Odoo application: http://localhost:8069
+pgAdmin database UI: http://localhost:5050
+PostgreSQL database server: localhost:5432
+```
+
+Use them for different purposes:
+
+```text
+Odoo
+= where the actual TALA/OpenEduCat system is configured and used.
+
+pgAdmin
+= where developers/admins inspect the PostgreSQL database.
+
+PostgreSQL
+= where Odoo stores system data.
+```
+
+Most setup work happens in Odoo, not pgAdmin.
+
+### Step 1: Create the Odoo Database
 
 Open:
 
@@ -210,11 +235,12 @@ Open:
 http://localhost:8069
 ```
 
-Use the master password from `admin_passwd` in `odoo.conf` when creating a database.
+If the system is fresh, Odoo should show a database creation page. Use the master password from `admin_passwd` in `config\odoo.conf`.
 
 Suggested local development database:
 
 ```text
+Master password: same value as admin_passwd in config\odoo.conf
 Database name: tala
 Email: admin@example.com
 Password: admin
@@ -222,15 +248,77 @@ Language: English
 Country: Philippines
 ```
 
-After database creation:
+Demo data choice:
+
+```text
+Enable demo data
+= useful for exploring sample records and learning OpenEduCat.
+
+Disable demo data
+= better for a clean real TALA working database.
+```
+
+For early exploration, demo data is acceptable. For a clean capstone/demo build, create a fresh database without demo data.
+
+After creating the database, Odoo logs you in as the administrator.
+
+### Step 2: Install OpenEduCat ERP
+
+In Odoo:
 
 1. Open Odoo.
 2. Go to Apps.
-3. Remove the default Apps filter if needed.
+3. Remove the default `Apps` filter in the search bar if OpenEduCat modules do not appear.
 4. Search for `OpenEduCat`.
-5. Install `OpenEduCat ERP` or install the individual OpenEduCat modules needed for development.
+5. Install `OpenEduCat ERP`.
 
-### Open pgAdmin
+Installing `OpenEduCat ERP` should install the main OpenEduCat modules used by TALA:
+
+```text
+openeducat_core
+openeducat_admission
+openeducat_assignment
+openeducat_attendance
+openeducat_classroom
+openeducat_exam
+openeducat_facility
+openeducat_fees
+openeducat_library
+openeducat_parent
+openeducat_timetable
+openeducat_erp
+```
+
+If `OpenEduCat ERP` is not visible:
+
+1. Go to Settings.
+2. Activate developer mode.
+3. Go back to Apps.
+4. Click Update Apps List.
+5. Search for `OpenEduCat ERP` again.
+
+If installing `OpenEduCat ERP` fails because a dependency is missing, install the modules in this order:
+
+```text
+OpenEduCat Core
+OpenEduCat Facility
+OpenEduCat Classroom
+OpenEduCat Timetable
+OpenEduCat Admission
+OpenEduCat Assignment
+OpenEduCat Parent
+OpenEduCat Library
+OpenEduCat Exam
+OpenEduCat Attendance
+OpenEduCat Fees
+OpenEduCat ERP
+```
+
+The `OpenEduCat Theme` module is optional. It affects the website/frontend theme, not the core ERP backend.
+
+### Step 3: Register PostgreSQL in pgAdmin
+
+pgAdmin is optional for normal use, but useful for developers who want to inspect the database.
 
 Open:
 
@@ -252,6 +340,97 @@ Password: same value as POSTGRES_PASSWORD
 ```
 
 When pgAdmin runs inside the same Compose stack, use `db` as the host. If using a locally installed pgAdmin outside Docker, use `localhost` as the host because the PostgreSQL container exposes port `5432` to Windows.
+
+Do not manually edit Odoo tables in pgAdmin unless there is a specific technical reason. Normal records should be created through Odoo.
+
+### Step 4: Configure the School Data in Odoo
+
+After OpenEduCat is installed, configure the system in this order:
+
+```text
+Company / Institution profile
+Academic years
+Academic terms
+Departments
+Courses / Programs
+Batches / Sections
+Subjects
+Faculty
+Students
+Admissions
+Fees
+Timetable
+Attendance
+Exams
+Library
+Parent records
+Portal users
+```
+
+In OpenEduCat, a `Batch` is the closest concept to a class section/block.
+
+### Step 5: Create Student Portal Accounts
+
+Students can log in only after a student record is linked to an Odoo user account.
+
+To create a student portal account:
+
+1. Open Odoo backend at `http://localhost:8069/web`.
+2. Go to Students.
+3. Create or open a student record.
+4. Save the student.
+5. Return to the student list.
+6. Select the student checkbox.
+7. Open the Actions menu.
+8. Choose `Create Users`.
+9. Confirm the `Create Users` wizard.
+
+After the user is created, check the linked `User` field on the student record or go to:
+
+```text
+Settings > Users & Companies > Users
+```
+
+Set or reset the student's password there.
+
+Student login:
+
+```text
+http://localhost:8069/web/login
+```
+
+Student portal redirect:
+
+```text
+http://localhost:8069/my
+```
+
+Parent portal redirect:
+
+```text
+http://localhost:8069/my/child
+```
+
+### Step 6: Confirm the Setup
+
+The setup is correct when:
+
+```text
+docker compose ps shows tala-postgres, tala-odoo, and tala-pgadmin running.
+http://localhost:8069 opens Odoo.
+The tala database exists.
+OpenEduCat ERP is installed.
+OpenEduCat menus are visible in the Odoo backend.
+pgAdmin can connect to PostgreSQL using host db.
+```
+
+To confirm installed OpenEduCat modules from PowerShell:
+
+```powershell
+docker exec tala-postgres psql -U attalasys -d tala -c "SELECT name, state, latest_version FROM ir_module_module WHERE name LIKE 'openeducat%' OR name = 'theme_web_openeducat' ORDER BY name;"
+```
+
+Expected result: the main `openeducat_*` modules should be in `installed` state. `theme_web_openeducat` may be `uninstalled`; that is acceptable unless the website theme is required.
 
 ### Daily Commands
 
